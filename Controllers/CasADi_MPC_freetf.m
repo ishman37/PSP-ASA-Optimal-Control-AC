@@ -5,6 +5,7 @@ classdef CasADi_MPC_freetf < matlab.System
         steps (1, 1) double = 50
         max_iter (1, 1) double = 400
         x_initial (6, 1) double
+        delay_time (1, 1) double = 0.5 %delay in seconds
     end
 
     properties (Access = private)
@@ -77,7 +78,7 @@ classdef CasADi_MPC_freetf < matlab.System
 
             obj.tf = obj.opti.variable(1);
 
-            cost = sum(obj.u(:,1)) * obj.tf / obj.steps*0.5 + sum(obj.u(:,1))^2 + sum(obj.u(:,2).^2) + sum(obj.x(:,6).^2);
+            cost = sum(obj.u(:,1)) * obj.tf / obj.steps*0.5 + sum(obj.u(:,1)^2)*0 + sum(obj.u(:,2).^2) + sum(obj.x(:,6).^2);
             obj.opti.minimize(cost);
 
             %constraints
@@ -121,6 +122,13 @@ classdef CasADi_MPC_freetf < matlab.System
             obj.opti.set_value(obj.p, [obj.x_initial(1), obj.x_initial(2), obj.x_initial(3), obj.x_initial(4), obj.x_initial(5), obj.x_initial(6)]);
             obj.opti.subject_to(obj.x(1, :) == obj.p); % Initial state
 
+            obj.u_opt = zeros([obj.steps, 2]);
+            % Propagate the initial state forward by the delay time
+            x_pred = obj.propagateState(obj.x_initial);
+
+            obj.opti.set_value(obj.p, x_pred');
+            obj.opti.subject_to(obj.x(1, :) == obj.p); % Initial state
+
             % Initial guess 
             [x_guess, u_guess, tf_guess] = guess_3DoF_with_tf(obj.x_initial', x_final, obj.steps, obj.vehicle);
 
@@ -140,25 +148,59 @@ classdef CasADi_MPC_freetf < matlab.System
             obj.opti.set_initial(obj.opti.lam_g, lam_g0);
         end
 
-        function [x_opt, u_opt] = stepImpl(obj,x_current)
-            obj.opti.set_value(obj.p, x_current'); % Should make it predict into the future to account for delay
-        
-            % Initial guess 
-            obj.opti.set_initial(obj.u, [obj.u_opt(2:end,:); obj.u_opt(end,:)]);
-            obj.opti.set_initial(obj.x, [x_current'; obj.x_opt(3:end,:); obj.x_opt(end,:)]);
+        function [x_opt, u_opt] = stepImpl(obj, x_current)
+            % Propagate the current state forward by the delay time
+            x_pred = obj.propagateState(x_current);
+            
+            % Update the initial condition parameter with the predicted state
+            obj.opti.set_value(obj.p, x_pred');
+            obj.opti.subject_to(obj.x(1, :) == obj.p); % Enforce the initial state
+            
+            % Update the initial guess for control inputs
+            % Shift the previous control inputs forward and append the last input
+            obj.opti.set_initial(obj.u, [obj.u_opt(2:end, :); obj.u_opt(end, :)]);
+            
+            % Update the initial guess for states:
+            % Shift the previous states forward and append the last state
+            obj.opti.set_initial(obj.x, [x_pred'; obj.x_opt(2:end, :)]);
             obj.opti.set_initial(obj.tf, obj.tf_opt * (1 - 1 / obj.steps))
 
+    
             % Solve the optimization problem
             sol = obj.opti.solve();
     
+            % Retrieve the optimized control inputs and state trajectory
             obj.u_opt = sol.value(obj.u);
             obj.x_opt = sol.value(obj.x);
             obj.tf_opt = sol.value(obj.tf);
 
-            x_opt = obj.x_opt;
+            % Update the optimized trajectories for the next step
             u_opt = obj.u_opt;
-            tf_opt = obj.tf_opt;
+            x_opt = obj.x_opt;
+            tf_opt = obj.tf_opt;            
         end
+    end
 
+    methods (Access = private)
+        function x_pred = propagateState(obj, x_current)
+
+            % Calculate the number of steps corresponding to the delay time
+            steps_delay = round(obj.delay_time / obj.t_step);
+            x_pred = x_current;
+            
+            for i = 1:steps_delay
+                if i <= size(obj.u_opt, 1)
+                    u_current = obj.u_opt(i, :)';
+                else
+                    u_current = obj.u_opt(end, :)';
+                end
+                
+                % Calculate state derivatives
+                x_dot = Dynamics3DoF(x_pred, u_current, obj.vehicle);
+                
+                % Euler integration to propagate the state
+                x_pred = x_pred + x_dot * obj.t_step;
+            end
+        end
     end
 end

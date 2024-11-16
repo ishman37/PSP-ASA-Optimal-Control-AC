@@ -1,37 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Mask SelfModifiable="on">
   <Type>CasADi_MPC</Type>
-  <SourceCheckSum>DDC23BDB60342D5E02BCDF12DC1C60F5</SourceCheckSum>
+  <SourceCheckSum>EE3210CEAC395A416389456EB62CE2A3</SourceCheckSum>
   <Display IconOpaque="transparent" RunInitForIconRedraw="off">image(&apos;CasADi.png&apos;);
 port_label(&apos;input&apos;,1,&apos;x&apos;);
 port_label(&apos;output&apos;,1,&apos;x_opt&apos;);
 port_label(&apos;output&apos;,2,&apos;u_opt&apos;);
-</Display>
+port_label(&apos;output&apos;,3,&apos;x_pred&apos;);</Display>
   <Description>Support name-value pair arguments when constructing object</Description>
   <Initialization>matlab.system.MLSysBlockIconAndPortLabelsInfo.updateMLSysBlockIconAndPortLabels(gcbh)</Initialization>
   <MaskParameter Name="vehicle" Type="edit" Tunable="off">
     <Prompt>vehicle:</Prompt>
-    <Value>[]</Value>
+    <Value>vehicle(0,0,0,0)</Value>
   </MaskParameter>
   <MaskParameter Name="t_step" Type="edit" Tunable="off">
     <Prompt>t_step:</Prompt>
-    <Value>[]</Value>
+    <Value>0.3</Value>
   </MaskParameter>
   <MaskParameter Name="steps" Type="edit" Tunable="off">
     <Prompt>steps:</Prompt>
-    <Value>[]</Value>
-  </MaskParameter>
-  <MaskParameter Name="jump" Type="edit" Tunable="off">
-    <Prompt>jump:</Prompt>
-    <Value>[]</Value>
+    <Value>50</Value>
   </MaskParameter>
   <MaskParameter Name="max_iter" Type="edit" Tunable="off">
     <Prompt>max_iter:</Prompt>
-    <Value>[]</Value>
+    <Value>400</Value>
   </MaskParameter>
   <MaskParameter Name="x_initial" Type="edit" Tunable="off">
     <Prompt>x_initial:</Prompt>
-    <Value>[]</Value>
+    <Value>[0,0,0,0,0,0]</Value>
   </MaskParameter>
   <MaskParameter Name="SimulateUsing" Type="popup" Evaluate="off" Tunable="off">
     <Prompt>SystemBlock:MATLABSystem:SimulateUsing</Prompt>
@@ -40,6 +36,10 @@ port_label(&apos;output&apos;,2,&apos;u_opt&apos;);
       <Option>SystemBlock:MATLABSystem:SimulateUsingCodeGeneration</Option>
       <Option>SystemBlock:MATLABSystem:SimulateUsingInterpretedExecution</Option>
     </TypeOptions>
+  </MaskParameter>
+  <MaskParameter Name="delay_time" Type="edit" Tunable="off">
+    <Prompt>delay in seconds:</Prompt>
+    <Value>0.5</Value>
   </MaskParameter>
   <DialogControl Type="Group" Name="DescGroupVar">
     <Prompt>CasADi_MPC</Prompt>
@@ -66,10 +66,6 @@ port_label(&apos;output&apos;,2,&apos;u_opt&apos;);
       <Prompt>steps:</Prompt>
       <ControlOptions PromptLocation="left"/>
     </DialogControl>
-    <DialogControl Type="Edit" Name="jump">
-      <Prompt>jump:</Prompt>
-      <ControlOptions PromptLocation="left"/>
-    </DialogControl>
     <DialogControl Type="Edit" Name="max_iter">
       <Prompt>max_iter:</Prompt>
       <ControlOptions PromptLocation="left"/>
@@ -86,5 +82,8 @@ port_label(&apos;output&apos;,2,&apos;u_opt&apos;);
       <Tooltip>SystemBlock:MATLABSystem:SimulateUsingDescription</Tooltip>
       <ControlOptions PromptLocation="left"/>
     </DialogControl>
+  </DialogControl>
+  <DialogControl Type="Edit" Name="delay_time">
+    <Prompt>delay in seconds:</Prompt>
   </DialogControl>
 </Mask>
